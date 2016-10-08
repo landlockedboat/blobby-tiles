@@ -1,10 +1,27 @@
+//HACK
+
 var game = new Phaser.Game(600, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 
+//========================================PRELOAD
+//========================================PRELOAD
+//========================================PRELOAD
+
+function preload() {
+	game.load.image('tile', 'assets/tile.png');
+	game.load.image('tile_bad', 'assets/tile-bad.png');
+	game.load.image('player', 'assets/player.png');
+}
+
+//Create variables
+
+//Map things
 var map_size = 5;
 
+//The main tile groups
 var b_tiles;
 var f_tiles;
 
+//Palette stuff
 var paletteIndex = 0;
 
 var palettes = [
@@ -26,16 +43,6 @@ function Palette(bg, tile, alert_1, alert_2, danger){
 	this.danger = danger;
 }
 
-//========================================PRELOAD
-//========================================PRELOAD
-//========================================PRELOAD
-
-function preload() {
-	game.load.image('tile', 'assets/tile.png');
-	game.load.image('tile_bad', 'assets/tile-bad.png');
-	game.load.image('player', 'assets/player.png');
-}
-
 //The player
 var player_group;
 var f_player;
@@ -49,25 +56,50 @@ var rightKey;
 
 var eKey;
 
-//========================================CREATE
-//========================================CREATE
-//========================================CREATE
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
 function create() {
 
-	//Binding input keys
-	upKey = game.input.keyboard.addKey(Phaser.Keyboard.UP);
-  downKey = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
-  leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
-  rightKey = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
-  eKey = game.input.keyboard.addKey(Phaser.Keyboard.E);
+  initInput();
 
 	//Caching the current palette, it will always be palettes[0]
 	//in the create function
 	var currentPalette = palettes[paletteIndex];
 	game.stage.backgroundColor = currentPalette.bg;
+  //We need to send the current palette so our tiles and player have color!
+  initTiles(currentPalette);
+  initPlayer(currentPalette);
+  //
+  danger_tiles = getNewTiles();
+}
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+//========================================CREATE================================
+function initPlayer(currentPalette){
+  //Creating the player
+  player_group = game.add.group();
+  player_group.x = 120 * 3 + 60;
+  player_group.y = 120 * 2 + 60;
+  b_player = player_group.create(0, 0, 'player');
+  b_player.anchor.set(.5);
+  b_player.tint = currentPalette.danger;
+  b_player.scale.set(.8);
+  f_player = player_group.create(0, 0, 'player');
+  f_player.anchor.set(.5);
+  f_player.scale.set(.7);
+  f_player.tint = currentPalette.bg;
+}
 
-	//Creating the tile map
-	b_tiles = game.add.group();
+function initTiles(currentPalette){
+  //Creating the tile map
+  b_tiles = game.add.group();
 	f_tiles = game.add.group();
 	for (var i = 0; i < map_size; i++){
 		for (var j = 0; j < map_size; j++){
@@ -80,41 +112,36 @@ function create() {
 			f_tile.anchor.set(.5);
 			f_tile.scale.set(.3);
 			f_tile.tint = currentPalette.alert_1;
-				}
-	}
-
-	//Creating the player
-	player_group = game.add.group();
-  player_group.x = 120 * 3 + 60;
-  player_group.y = 120 * 2 + 60;
-	b_player = player_group.create(0, 0, 'player');
-	b_player.anchor.set(.5);
-	b_player.tint = currentPalette.danger;
-  b_player.scale.set(.8);
-	f_player = player_group.create(0, 0, 'player');
-	f_player.anchor.set(.5);
-	f_player.scale.set(.7);
-	f_player.tint = currentPalette.bg;
-
-	specTiles = getNewTiles();
+		}
+  }
 }
 
-var finished = false;
-var redSpeed = 0.05;
-var redTime = 0;
-var scaleTime = 0;
+function initInput(){
+  //Binding input keys
+  upKey = game.input.keyboard.addKey(Phaser.Keyboard.UP);
+  downKey = game.input.keyboard.addKey(Phaser.Keyboard.DOWN);
+  leftKey = game.input.keyboard.addKey(Phaser.Keyboard.LEFT);
+  rightKey = game.input.keyboard.addKey(Phaser.Keyboard.RIGHT);
+  eKey = game.input.keyboard.addKey(Phaser.Keyboard.E);
+}
 
+//Update variables
+
+//Variables for handling tile timing
+var danger_fade_away_speed = 0.05;
+var danger_fade_away_time = 0;
+var warning_fade_in_speed = 0.02;
+var warning_fade_in_time = 0;
+
+//frames actually means context frames
 var framesBetweenPalettes = 5;
 var currentFramesBetweenPalettes = 0;
 
+//CAN BE ERASED
+var ePressed = false;
+//CAN BE ERASED
 
-var pressedKeys = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-  e:false
-};
+//Enum to store directions
 var direction = {
   up: 0,
   down: 1,
@@ -122,36 +149,42 @@ var direction = {
   right: 3,
   none: 4
 };
+
 var nextDirection = direction.none;
+//This gets locked once we decide to move in a direction
 var acceptInput = true;
 
+//This is for changing the palette one time only once the tiles have begun
+//to dissapear. IT'S AN UGLY HACK
 var changedPalette = false;
 var player_speed = 5;
 var nextPos;
 
-var warning_speed = 0.02;
 
 
-//========================================UPDATE
-//========================================UPDATE
-//========================================UPDATE
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
 
 function update() {
 	var currentPalette = palettes[paletteIndex];
   getPlayerInput();
   movePlayer();
 
-	if(scaleTime <= 1){
-		scaleTime+=patternSpeed;
+	if(warning_fade_in_time <= 1){
+		warning_fade_in_time+=patternSpeed;
 	}
 	else{
-		redTime += redSpeed;
+		danger_fade_away_time += danger_fade_away_speed;
 	}
-	for (var i = 0; i < specTiles.length; ++i){
-		if(scaleTime >= 1){
-			if(redTime <= 1){
-				specTiles[i].tint = currentPalette.danger;
-				specTiles[i].alpha -= redSpeed;
+	for (var i = 0; i < danger_tiles.length; ++i){
+		if(warning_fade_in_time >= 1){
+			if(danger_fade_away_time <= 1){
+				danger_tiles[i].tint = currentPalette.danger;
+				danger_tiles[i].alpha -= danger_fade_away_speed;
         checkForDeaths();
 				if(!changedPalette){
 					changedPalette = true;
@@ -159,26 +192,33 @@ function update() {
 				}
 			}
 			else{
-				redTime  = 0;
-				scaleTime = 0;
-				specTiles[i].scale.set(.3);
-				specTiles[i].alpha = 0;
-				specTiles = getNewTiles();
+				danger_fade_away_time  = 0;
+				warning_fade_in_time = 0;
+				danger_tiles[i].scale.set(.3);
+				danger_tiles[i].alpha = 0;
+				danger_tiles = getNewTiles();
 				changedPalette = false;
 			}
 		}
 		else{
-			specTiles[i].scale.set(scaleTime);
-			specTiles[i].tint = Phaser.Color.interpolateColor(currentPalette.alert_1, currentPalette.alert_2, 100, 100*scaleTime);
-			specTiles[i].alpha = 1;
+			danger_tiles[i].scale.set(warning_fade_in_time);
+			danger_tiles[i].tint = Phaser.Color.interpolateColor(currentPalette.alert_1, currentPalette.alert_2, 100, 100*warning_fade_in_time);
+			danger_tiles[i].alpha = 1;
 		}
 	}
 }
 
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+//========================================UPDATE================================
+
 function checkForDeaths(){
-  for(var i = 0; i< specTiles.length; ++i){
-    if(player_group.x == specTiles[i].x &&
-      player_group.y == specTiles[i].y){
+  for(var i = 0; i< danger_tiles.length; ++i){
+    if(player_group.x == danger_tiles[i].x &&
+      player_group.y == danger_tiles[i].y){
         f_player.kill();
         b_player.kill();
         console.log("rekt");
@@ -233,12 +273,12 @@ function resumeInput(){
 }
 
 function getPlayerInput(){
-  if(eKey.isDown && !pressedKeys.e){
-    pressedKeys.e = true;
+  if(eKey.isDown && !ePressed){
+    ePressed = true;
     changePlayerCol();
   }
   if(eKey.isUp)
-    pressedKeys.e = false;
+    ePressed = false;
   if(upKey.isDown && acceptInput){
     nextDirection = direction.up;
     nextPos = player_group.y - 120;
@@ -300,7 +340,7 @@ function getIndex(coord){
 	return coord.x + coord.y * maxCoord;
 }
 
-var specTiles;
+var danger_tiles;
 
 
 
@@ -374,7 +414,7 @@ function getNewTiles(){
   {
     //We retrieve the current pattern being used
     var pattern = patterns[patternIndex];
-    patternSpeed = warning_speed;
+    patternSpeed = warning_fade_in_speed;
     //We get its contents current frame
     var frame = getRow(pattern.content, frameIndex);
 
