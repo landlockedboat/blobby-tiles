@@ -8,7 +8,6 @@ var game = new Phaser.Game(600, 600, Phaser.AUTO, '', { preload: preload, create
 
 function preload() {
 	game.load.image('tile', 'assets/tile.png');
-	game.load.image('tile_bad', 'assets/tile-bad.png');
 	game.load.image('player', 'assets/player.png');
 }
 
@@ -107,7 +106,7 @@ function initTiles(currentPalette){
 			b_tile.anchor.set(.5);
 			b_tile.scale.set(.99);
 			b_tile.tint = currentPalette.tile;
-			var f_tile = f_tiles.create(120 * i + 60, 120 * j + 60, 'tile_bad');
+			var f_tile = f_tiles.create(120 * i + 60, 120 * j + 60, 'tile');
 			f_tile.alpha = 0;
 			f_tile.anchor.set(.5);
 			f_tile.scale.set(.3);
@@ -221,7 +220,6 @@ function checkForDeaths(){
       player_group.y == danger_tiles[i].y){
         f_player.kill();
         b_player.kill();
-        console.log("rekt");
       }
   }
 }
@@ -425,8 +423,7 @@ function getNewTiles(){
 
 
   	++frameIndex;
-  	console.log(frameIndex);
-  	if(frameIndex >= pattern.length){
+		if(frameIndex >= pattern.length){
   		frameIndex = 0;
   		//Content's over...
   		++patternIndex;
